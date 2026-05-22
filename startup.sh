@@ -28,6 +28,7 @@ cd "$APP_DIR"
 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 # ── 3. Bootstrap Laravel ──────────────────────────────────────────────────────
+php artisan package:discover --ansi
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
