@@ -1,38 +1,41 @@
 #!/bin/bash
-# Azure App Service (Linux, PHP 8.3) startup script.
-# Set in Azure Portal: Configuration > General settings > Startup Command
-#   /home/site/wwwroot/startup.sh
+# Azure App Service (Linux, PHP 8.3 + nginx) startup script.
 
 APP_DIR="/home/site/wwwroot"
 cd "$APP_DIR"
 
-# ── 1. Point Apache at Laravel's public/ folder ──────────────────────────────
-cat > /etc/apache2/sites-available/000-default.conf <<'VHOST'
-<VirtualHost *:8080>
-    DocumentRoot /home/site/wwwroot/public
+# ── 1. Configure nginx to serve from Laravel's public/ folder ─────────────────
+cat > /etc/nginx/conf.d/default.conf <<'NGINX'
+server {
+    listen 8080;
+    root /home/site/wwwroot/public;
+    index index.php index.html;
 
-    <Directory /home/site/wwwroot/public>
-        AllowOverride All
-        Require all granted
-        Options -Indexes
-    </Directory>
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
 
-    ErrorLog  /home/LogFiles/apache_error.log
-    CustomLog /home/LogFiles/apache_access.log combined
-</VirtualHost>
-VHOST
+    location ~ \.php$ {
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
 
-a2enmod rewrite
+    location ~ /\.ht {
+        deny all;
+    }
+}
+NGINX
+
+nginx -s reload 2>/dev/null || true
 
 # ── 2. Ensure storage directories exist ──────────────────────────────────────
 mkdir -p storage/framework/{sessions,views,cache/data}
 mkdir -p storage/logs
 mkdir -p bootstrap/cache
 
-# ── 3. Install dependencies (skip scripts to avoid bootstrap errors) ──────────
-composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
-
-# ── 4. Bootstrap Laravel ──────────────────────────────────────────────────────
+# ── 3. Bootstrap Laravel ──────────────────────────────────────────────────────
 php artisan package:discover --ansi
 php artisan config:cache
 php artisan route:cache
@@ -40,9 +43,6 @@ php artisan view:cache
 php artisan migrate --force
 php artisan storage:link --force
 
-# ── 5. Permissions ────────────────────────────────────────────────────────────
+# ── 4. Permissions ────────────────────────────────────────────────────────────
 chmod -R 775 storage bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
-
-# ── 6. Restart Apache ─────────────────────────────────────────────────────────
-service apache2 restart
