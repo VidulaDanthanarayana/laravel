@@ -4,6 +4,7 @@
 #   /home/site/wwwroot/startup.sh
 
 APP_DIR="/home/site/wwwroot"
+cd "$APP_DIR"
 
 # ── 1. Point Apache at Laravel's public/ folder ──────────────────────────────
 cat > /etc/apache2/sites-available/000-default.conf <<'VHOST'
@@ -23,11 +24,15 @@ VHOST
 
 a2enmod rewrite
 
-# ── 2. Install dependencies ───────────────────────────────────────────────────
-cd "$APP_DIR"
-composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+# ── 2. Ensure storage directories exist ──────────────────────────────────────
+mkdir -p storage/framework/{sessions,views,cache/data}
+mkdir -p storage/logs
+mkdir -p bootstrap/cache
 
-# ── 3. Bootstrap Laravel ──────────────────────────────────────────────────────
+# ── 3. Install dependencies (skip scripts to avoid bootstrap errors) ──────────
+composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
+
+# ── 4. Bootstrap Laravel ──────────────────────────────────────────────────────
 php artisan package:discover --ansi
 php artisan config:cache
 php artisan route:cache
@@ -35,9 +40,9 @@ php artisan view:cache
 php artisan migrate --force
 php artisan storage:link --force
 
-# ── 4. Permissions ────────────────────────────────────────────────────────────
+# ── 5. Permissions ────────────────────────────────────────────────────────────
 chmod -R 775 storage bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
 
-# ── 5. Restart Apache ─────────────────────────────────────────────────────────
+# ── 6. Restart Apache ─────────────────────────────────────────────────────────
 service apache2 restart
