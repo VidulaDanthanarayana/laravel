@@ -34,6 +34,8 @@ nginx -s reload 2>/dev/null || true
 mkdir -p storage/framework/{sessions,views,cache/data}
 mkdir -p storage/logs
 mkdir -p bootstrap/cache
+mkdir -p database
+touch database/database.sqlite
 
 # ── 3. Bootstrap Laravel ──────────────────────────────────────────────────────
 php artisan package:discover --ansi
