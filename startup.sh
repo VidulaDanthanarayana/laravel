@@ -39,9 +39,6 @@ touch database/database.sqlite
 
 # ── 3. Bootstrap Laravel ──────────────────────────────────────────────────────
 php artisan package:discover --ansi
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
 php artisan migrate --force
 php artisan storage:link --force
 
